@@ -1,0 +1,105 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compileP2",
+            "type": "shell",
+    		  "osx": {
+                "command": "/Applications/FlexProp/bin/flexspin",
+    		  },
+    		  "windows": {
+                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\flexspin.exe",
+    		  },
+    		  "linux": {
+                "command": "/opt/flexprop/bin/flexspin",
+    		  },
+            "args": [
+                "-2",
+                "-Wabs-paths",
+                "-Wmax-errors=99",
+                "${fileBasename}"
+            ],
+            "problemMatcher": {
+                "owner": "Spin2",
+                "fileLocation": ["autoDetect", "${workspaceFolder}/src"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "message": 4
+                }
+            },
+            "presentation": {
+                "panel": "new",
+                "focus": true
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "compileTopP2",
+            "type": "shell",
+            "osx": {
+                "command": "/Applications/FlexProp/bin/flexspin",
+            },
+            "windows": {
+                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\flexspin.exe",
+            },
+            "linux": {
+                "command": "/opt/flexprop/bin/flexspin",
+            },
+            "args": [
+                "-2",
+                "-Wabs-paths",
+                "-Wmax-errors=99",
+                "isp_measure_panel.spin2"
+            ],
+            "problemMatcher": {
+                "owner": "Spin2",
+                "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "message": 4
+                }
+            },
+            "presentation": {
+                "panel": "new",
+                "focus": true
+            },
+        },
+        {
+            "label": "downloadP2",
+            "type": "shell",
+            "osx": {
+                "command": "/Applications/FlexProp/bin/loadp2",
+            },
+            "windows": {
+                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\loadp2.exe",
+            },
+            "linux": {
+                "command": "/opt/flexprop/bin/loadp2",
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "panel": "new",
+                "focus": true
+            },
+            "args": [
+                "-b230400",
+                "isp_measure_panel.binary",
+                "-t"
+            ],
+            "dependsOn": [
+                "compileTopP2"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,92 @@
+'' =================================================================================================
+''
+''   File....... isp_bh1750.spin2
+''   Purpose.... Object providing access to BH1750 via i2c
+''   Authors.... Stephen M Moraco
+''               -- Copyright (c) 2021 Iron Sheep Productions, LLC
+''               -- see below for terms of use
+''   E-mail..... stephen@ironsheep.biz
+''   Started.... Mar 2021
+''   Updated.... 19 Mar 2021
+''
+'' =================================================================================================
+CON { pins for BH1750 }
+
+    PIN_BH1750_SCL  = 16    ' blue
+    PIN_BH1750_SDA  = 17    ' yellow
+    PIN_BH1750_ADDR = 18    ' dk grn
+
+    bh1750_speed_khz = 100_000
+
+    DVC_SLAVE1_ADDR = %1011100  ' 0x5c
+    DVC_SLAVE0_ADDR = %0100011  ' 0x23
+
+    #0, DVC_NOT_FOUND, DVC_SLAVE0, DVC_SLAVE1
+
+CON { BH1750 commands }
+
+    CMD_PWR_DOWN                = %0000_0000
+    CMD_PWR_ON                  = %0000_0001
+    CMD_RESET                   = %0000_0111
+    CMD_MEAS_CONT_HRES_MODE1    = %0001_0000
+    CMD_MEAS_CONT_HRES_MODE2    = %0001_0001
+    CMD_MEAS_CONT_LRES_MODE     = %0001_0011
+    CMD_MEAS_ONCE_HRES_MODE1    = %0010_0000
+    CMD_MEAS_ONCE_HRES_MODE2    = %0010_0001
+    CMD_MEAS_ONCE_LRES_MODE     = %0010_0011
+    CMD_CHG_MEAS_TIME_HBIT      = %0100_0000
+    CMD_CHG_MEAS_TIME_LBIT      = %0110_0000
+
+OBJ { objects used }
+
+    i2c_bus : "jm_i2c"
+
+PUB null()
+
+'' This is not a top-level object
+
+PUB setup() : deviceFound
+
+    ' for another day 3.3v not enough?
+    pinh(PIN_BH1750_ADDR)
+    waitms(3)
+
+    i2c_bus.setup(PIN_BH1750_SCL, PIN_BH1750_SDA, bh1750_speed_khz, true)
+
+    waitms(20)
+
+    deviceFound := DVC_NOT_FOUND
+    if(i2c_bus.present(DVC_SLAVE0_ADDR))
+        deviceFound := DVC_SLAVE0
+
+    elseif(i2c_bus.present(DVC_SLAVE1_ADDR))
+        deviceFound := DVC_SLAVE1
+
+
+CON { license }
+
+{{
+ -------------------------------------------------------------------------------------------------
+  MIT License
+
+  Copyright (c) 2020 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+ =================================================================================================
+}}

@@ -10,6 +10,13 @@ __pycache__/
 *.zip
 *.gz
 
+# vscode edit history
+.history/
+
+# compile products
+*.binary
+*.p2asm
+
 # Distribution / packaging
 .Python
 build/
