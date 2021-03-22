@@ -6,7 +6,7 @@
 ''               Copyright (c) 2020 Jon McPhalen
 ''               -- see below for terms of use
 ''   E-mail..... jon.mcphalen@gmail.com
-''   Started....  
+''   Started....
 ''   Updated.... 30 JUN 2020
 ''
 '' =================================================================================================
@@ -18,12 +18,12 @@
 con { fixed io pins }
 
   RX1      = 63  { I }                                          ' programming / debug
-  TX1      = 62  { O }                                           
-                                                                 
+  TX1      = 62  { O }
+
   SF_CS    = 61  { O }                                          ' serial flash
-  SF_SCK   = 60  { O }                                           
-  SF_SDO   = 59  { O }                                           
-  SF_SDI   = 58  { I }  
+  SF_SCK   = 60  { O }
+  SF_SDO   = 59  { O }
+  SF_SDI   = 58  { I }
 
 
 con
@@ -43,6 +43,21 @@ pub null()
 
 '' This is not a top-level object
 
+pub quiesce(scl, sda, pullup)
+
+'' Define I2C SCL (clock) and SDA (data) pins
+'' -- pullup controls high level drive configuration of SCL and SDA
+
+  case pullup
+    PU_NONE : pullup := P_HIGH_FLOAT                            ' use external pull-up
+    PU_1K5  : pullup := P_HIGH_1K5                              ' 1.5k
+    PU_3K3  : pullup := P_HIGH_1MA                              ' acts like ~3.3k
+    other   : pullup := P_HIGH_15K                              ' 15K
+
+  org
+                wrpin     pullup, scl                           ' configure high drive
+                drvl      scl                                   ' clock low, LA triggers off of clock
+  end
 
 pub setup(scl, sda, khz, pullup) | tix
 
@@ -112,15 +127,15 @@ pub start() | scl, sda, tix
                 drvh      sda                                   ' both high
                 drvh      scl
                 waitx     tix
-                 
+
                 testp     scl                           wc      ' verify scl released
     if_nc       jmp       $-1
-                 
+
                 drvl      sda                                   ' start sequence
                 waitx     tix
                 drvl      scl
                 waitx     tix
-  end            
+  end
 
 
 pub write(i2cbyte) : ackbit | scl, sda, tix
@@ -129,32 +144,32 @@ pub write(i2cbyte) : ackbit | scl, sda, tix
 '' -- leaves SCL low
 
   longmove(@scl, @sclpin, 3)                                    ' copy pins & timing
-                                                                 
-  org                                                            
+
+  org
                 shl       i2cbyte, #24                          ' align i2cbyte.[7] to i2cbyte.[31]
-                                                                 
+
 .wr_byte        rep       #8, #8                                ' output 8 bits, msbfirst
                  shl      i2cbyte, #1                   wc      ' msb --> c
                  drvc     sda                                   ' c -- sda
                  waitx    tix                                   ' let sda settle
                  drvh     scl                                   ' scl high
-                 waitx    tix                                    
-                 waitx    tix                                    
+                 waitx    tix
+                 waitx    tix
                  drvl     scl                                   ' scl low
-                 waitx    tix                                    
-                                                                 
+                 waitx    tix
+
 .get_ack        drvh      sda                                   ' pull-up sda
-                waitx     tix                                    
+                waitx     tix
                 drvh      scl                                   ' scl high
-                waitx     tix                                    
+                waitx     tix
                 testp     sda                           wc      ' sample sda (ack bit)
                 muxc      ackbit, #1                            ' update return value
-                waitx     tix                                    
+                waitx     tix
                 drvl      scl                                   ' scl low
-                waitx     tix                                    
-                waitx     tix                                    
-  end                                                            
-                                                         
+                waitx     tix
+                waitx     tix
+  end
+
 
 pub wr_block(p_block, count) : ackbit | scl, sda, tix, i2cbyte
 
@@ -168,26 +183,26 @@ pub wr_block(p_block, count) : ackbit | scl, sda, tix, i2cbyte
 .get_byte       rdbyte    i2cbyte, p_block                      ' read byte from block
                 add       p_block, #1                           ' increment block pointer
                 shl       i2cbyte, #24                          ' align i2cbyte.[7] to i2cbyte.[31]
-                                                                 
+
 .wr_byte        rep       #8, #8                                ' output 8 bits, msbfirst
                  shl      i2cbyte, #1                   wc      ' msb --> c
                  drvc     sda                                   ' c -- sda
                  waitx    tix                                   ' let sda settle
                  drvh     scl                                   ' scl high
-                 waitx    tix                                    
-                 waitx    tix                                    
+                 waitx    tix
+                 waitx    tix
                  drvl     scl                                   ' scl low
-                 waitx    tix                                    
-                                                                 
+                 waitx    tix
+
 .get_ack        drvh      sda                                   ' pull-up sda
-                waitx     tix                                    
+                waitx     tix
                 drvh      scl                                   ' scl high
-                waitx     tix                                    
+                waitx     tix
                 testp     sda                           wc      ' sample sda (ack bit)
     if_c        or        ackbit, #1                            ' update return value
-                waitx     tix                                    
+                waitx     tix
                 drvl      scl                                   ' scl low
-                waitx     tix                                    
+                waitx     tix
                 waitx     tix
 
                 djnz      count, #.get_byte
@@ -202,30 +217,30 @@ pub read(ackbit) : i2cbyte | scl, sda, tix
 
   longmove(@scl, @sclpin, 3)                                    ' copy pins & timing
 
-  org                                                    
+  org
                 drvh      sda                                   ' pull-up sda
-                                                                 
+
 .rd_byte        rep       #9, #8                                ' read 8 bits, msb first
-                 waitx    tix                                    
+                 waitx    tix
                  drvh     scl                                   ' scl high
-                 waitx    tix                                    
+                 waitx    tix
                  testp    sda                           wc      ' sample sda
                  shl      i2cbyte, #1                           ' make room for new bit
                  muxc     i2cbyte, #1                           ' sda --> i2cbyte.[0]
-                 waitx    tix                                    
+                 waitx    tix
                  drvl     scl                                   ' scl low
-                 waitx    tix                                    
-                                                                 
+                 waitx    tix
+
 .put_ack        testb     ackbit, #0                    wc      ' ackbit.[0] --> c
                 drvc      sda                                   ' c --> sda
                 waitx     tix                                   ' let sda settle
                 drvh      scl                                   ' scl high
-                waitx     tix                                    
-                waitx     tix                                    
+                waitx     tix
+                waitx     tix
                 drvl      scl                                   ' scl low
-                waitx     tix                                    
-                waitx     tix                                    
-  end            
+                waitx     tix
+                waitx     tix
+  end
 
 
 pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix
@@ -239,35 +254,35 @@ pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix
   org
 .rd_block       drvh      sda                                   ' pull-up sda
                 mov       i2cbyte, #0                           ' clear workspace
-                                                                 
+
 .rd_byte        rep       #9, #8                                ' read 8 bits, msb first
-                 waitx    tix                                    
+                 waitx    tix
                  drvh     scl                                   ' scl high
-                 waitx    tix                                    
+                 waitx    tix
                  testp    sda                           wc      ' sample sda
                  shl      i2cbyte, #1                           ' make room for new bit
                  muxc     i2cbyte, #1                           ' sda --> i2cbyte.[0]
-                 waitx    tix                                    
+                 waitx    tix
                  drvl     scl                                   ' scl low
-                 waitx    tix                                    
-                                                                 
+                 waitx    tix
+
 .put_ack        cmp       count, #1                     wz      ' last byte?
     if_nz       drvl      sda                                   ' 0 --> sda (ack) if not last byte
     if_z        testb     ackbit, #0                    wc      ' last byte, ackbit.[0] --> c
     if_z        drvc      sda                                   ' last byte, c --> sda
                 waitx     tix                                   ' let sda settle
                 drvh      scl                                   ' scl high
-                waitx     tix                                    
-                waitx     tix                                    
+                waitx     tix
+                waitx     tix
                 drvl      scl                                   ' scl low
-                waitx     tix                                    
-                waitx     tix                                    
-                                                                 
+                waitx     tix
+                waitx     tix
+
 .put_byte       wrbyte    i2cbyte, p_block                      ' write byte to block
                 add       p_block, #1                           ' increment block pointer
-                                                                 
-                djnz      count, #.rd_block                      
-  end                                                    
+
+                djnz      count, #.rd_block
+  end
 
 
 pub stop() | scl, sda, tix
@@ -281,14 +296,14 @@ pub stop() | scl, sda, tix
                 drvl      sda                                   ' hold sda low
                 drvh      scl                                   ' release scl
                 waitx     tix
-                 
+
                 testp     scl                           wc      ' wait for scl to release
     if_nc       jmp       $-1
-                 
+
                 waitx     tix
                 drvh      sda                                   ' finish stop sequence
-  end            
-                 
+  end
+
 
 con { license }
 

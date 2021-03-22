@@ -68,14 +68,41 @@ OBJ { our sensors }
 
     lightSensor : "isp_bh1750"
 
-PUB main() | deviceFound
+PUB main() | success, value
 
     setup()
     wait_for_terminal(false)
 
+    quietSensor() ' set pins to output low... so we can set LA trigger
+
     term.fstr0(string("\r\nMeasure Panel Started!\r\n\r\n"))
 
-    deviceFound := lightSensor.setup()                                           ' i2c @ 100kHz, external pull-ups
+    initSensor()    ' start our i2c light sensor
+    'drivePinsForLATest()
+
+    success := lightSensor.powerOn()
+    if(success)
+        term.fstr0(string("Power-on worked\r\n"))
+    else
+        term.fstr0(string("Power-on ERROR\r\n"))
+
+    success, value := lightSensor.readOnce()
+
+    term.fstr0(string("\r\nDone\r\n"))
+
+
+PRI quietSensor()
+
+    lightSensor.init()  ' set pins to output low... so we can set LA trigger
+
+
+PRI initSensor() | deviceFound
+
+    term.fstr0(string("Setup...\r\n"))
+    lightSensor.setup()                                           ' i2c @ 100kHz, external pull-ups
+
+    term.fstr0(string("ID Slave...\r\n"))
+    deviceFound := lightSensor.idDevice()
     if(deviceFound == lightSensor.DVC_SLAVE0)
         term.fstr0(string("Found SLAVE0\r\n"))
 
@@ -85,7 +112,20 @@ PUB main() | deviceFound
     else
         term.fstr0(string("Found no slaves\r\n"))
 
-    term.fstr0(string("\r\nDone\r\n"))
+CON { pins for testing }
+
+    PIN_BH1750_SCL  = 16    ' blue
+    PIN_BH1750_SDA  = 17    ' yellow
+    PIN_BH1750_ADDR = 18    ' dk grn
+
+PRI drivePinsForLATest() | index
+    '' see if we have LA wired up correctly...
+    repeat index from 0 to 1000
+        pintoggle(PIN_BH1750_SCL)
+        if (index // 2 == 0)
+            pintoggle(PIN_BH1750_SDA)
+        if (index // 3 == 0)
+            pintoggle(PIN_BH1750_ADDR)
 
 
 PRI setup()

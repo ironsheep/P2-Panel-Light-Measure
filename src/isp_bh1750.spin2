@@ -16,8 +16,9 @@ CON { pins for BH1750 }
     PIN_BH1750_SDA  = 17    ' yellow
     PIN_BH1750_ADDR = 18    ' dk grn
 
-    bh1750_speed_khz = 100_000
+    bh1750_speed_khz = 50_000
 
+    DVC_SLAVE_UNKNOWN = 0
     DVC_SLAVE1_ADDR = %1011100  ' 0x5c
     DVC_SLAVE0_ADDR = %0100011  ' 0x23
 
@@ -37,31 +38,104 @@ CON { BH1750 commands }
     CMD_CHG_MEAS_TIME_HBIT      = %0100_0000
     CMD_CHG_MEAS_TIME_LBIT      = %0110_0000
 
+    DLY_HRES_MODE1_IN_MS        = 180   ' typ 120 ms (180 ms max)
+    DLY_HRES_MODE2_IN_MS        = 180   ' typ 120 ms (180 ms max)
+    DLY_LRES_MODE_IN_MS         = 24    ' typ 16 ms (24 ms max)
+
+    FLAG_ACK = 1
+    FLAG_NOT_ACK = 0
+
+    MODE_READ  = %0000_0001
+    MODE_WRITE = %0000_0000
+
 OBJ { objects used }
 
     i2c_bus : "jm_i2c"
 
+VAR { device state information }
+
+    long  slaveAddress
+
 PUB null()
 
 '' This is not a top-level object
+PUB init()
+    '' init the output pins (quiet the device)
+    'pinfloat(PIN_BH1750_ADDR)   ' slave1
+    'wrpin(PIN_BH1750_ADDR, P_HIGH_1MA)
+    'pinh(PIN_BH1750_ADDR)   ' slave0?
 
-PUB setup() : deviceFound
+    ' have the driver force its own pins quiet
+    i2c_bus.quiesce(PIN_BH1750_SCL, PIN_BH1750_SDA, i2c_bus.PU_3K3)
 
-    ' for another day 3.3v not enough?
-    pinh(PIN_BH1750_ADDR)
-    waitms(3)
+PUB setup()
 
-    i2c_bus.setup(PIN_BH1750_SCL, PIN_BH1750_SDA, bh1750_speed_khz, true)
+    i2c_bus.setup(PIN_BH1750_SCL, PIN_BH1750_SDA, bh1750_speed_khz, i2c_bus.PU_3K3)
 
-    waitms(20)
+PUB idDevice() : deviceFound | have0, have1
+
+    have0 := have1 := false
+    if(i2c_bus.present(DVC_SLAVE1_ADDR))
+        have1 := true
+    if(i2c_bus.present(DVC_SLAVE0_ADDR))
+        have0 := true
 
     deviceFound := DVC_NOT_FOUND
-    if(i2c_bus.present(DVC_SLAVE0_ADDR))
-        deviceFound := DVC_SLAVE0
-
-    elseif(i2c_bus.present(DVC_SLAVE1_ADDR))
+    slaveAddress := DVC_SLAVE_UNKNOWN
+    if(!have0 and have1)
         deviceFound := DVC_SLAVE1
+        slaveAddress := DVC_SLAVE1_ADDR
+    elseif(have0 and !have1)
+        deviceFound := DVC_SLAVE0
+        slaveAddress := DVC_SLAVE1_ADDR
 
+PUB powerOn() : ok | ackBit
+
+    ok := false
+    i2c_bus.start()
+    ackBit := i2c_bus.write((slaveAddress << 1) | MODE_WRITE)
+    'if(ackbit)
+    ackBit := i2c_bus.write(CMD_PWR_ON)
+    if(ackbit)
+        ok := true
+    i2c_bus.stop()
+
+PRI measureOnce(cmdByte): ok | ackbit
+
+    ok := false
+    i2c_bus.start()
+    ackBit := i2c_bus.write((slaveAddress << 1) | MODE_WRITE)
+    'if(ackbit)
+    ackBit := i2c_bus.write(cmdByte)
+    if(ackbit)
+        ok := true
+    i2c_bus.stop()
+
+
+PUB readOnce() : ok, value | ackBit
+
+    value := 0
+    ok := measureOnce(CMD_MEAS_ONCE_HRES_MODE1)
+
+    waitms(DLY_HRES_MODE1_IN_MS)    ' wait for meas complete
+
+    i2c_bus.start()
+    ackBit := i2c_bus.write((slaveAddress << 1) | MODE_READ)
+    'if(ackbit)
+    value.byte[1] := i2c_bus.read(FLAG_ACK)
+    value.byte[0] := i2c_bus.read(FLAG_NOT_ACK)
+    i2c_bus.stop()
+
+PUB readContinuous() : ok | ackBit
+
+    ok := false
+    i2c_bus.start()
+    ackBit := i2c_bus.write(slaveAddress)
+    'if(ackbit)
+    ackBit := i2c_bus.write(CMD_PWR_ON)
+    if(ackbit)
+        ok := true
+    i2c_bus.stop()
 
 CON { license }
 
