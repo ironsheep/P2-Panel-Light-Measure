@@ -43,6 +43,11 @@ pub null()
 
 '' This is not a top-level object
 
+pub getClockFreq() : freqValue, freqValue2
+
+    freqValue := clkfreq
+    'freqValue2 := _clkfreq
+
 pub quiesce(scl, sda, pullup)
 
 '' Define I2C SCL (clock) and SDA (data) pins

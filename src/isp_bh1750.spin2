@@ -42,9 +42,6 @@ CON { BH1750 commands }
     DLY_HRES_MODE2_IN_MS        = 180   ' typ 120 ms (180 ms max)
     DLY_LRES_MODE_IN_MS         = 24    ' typ 16 ms (24 ms max)
 
-    FLAG_ACK = 1
-    FLAG_NOT_ACK = 0
-
     MODE_READ  = %0000_0001
     MODE_WRITE = %0000_0000
 
@@ -63,10 +60,15 @@ PUB init()
     '' init the output pins (quiet the device)
     'pinfloat(PIN_BH1750_ADDR)   ' slave1
     'wrpin(PIN_BH1750_ADDR, P_HIGH_1MA)
-    'pinh(PIN_BH1750_ADDR)   ' slave0?
+    pinh(PIN_BH1750_ADDR)   ' slave0?
 
     ' have the driver force its own pins quiet
     i2c_bus.quiesce(PIN_BH1750_SCL, PIN_BH1750_SDA, i2c_bus.PU_3K3)
+
+pub getClockFreq() : freqValue, freqValue2
+
+    freqValue, freqValue2 := i2c_bus.getClockFreq()
+
 
 PUB setup()
 
@@ -122,8 +124,8 @@ PUB readOnce() : ok, value | ackBit
     i2c_bus.start()
     ackBit := i2c_bus.write((slaveAddress << 1) | MODE_READ)
     'if(ackbit)
-    value.byte[1] := i2c_bus.read(FLAG_ACK)
-    value.byte[0] := i2c_bus.read(FLAG_NOT_ACK)
+    value.byte[1] := i2c_bus.read(i2c_bus.ACK)
+    value.byte[0] := i2c_bus.read(i2c_bus.NAK)
     i2c_bus.stop()
 
 PUB readContinuous() : ok | ackBit

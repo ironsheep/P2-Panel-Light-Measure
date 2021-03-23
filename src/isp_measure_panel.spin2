@@ -68,7 +68,7 @@ OBJ { our sensors }
 
     lightSensor : "isp_bh1750"
 
-PUB main() | success, value
+PUB main() | success, value, freqValue, freqValue2
 
     setup()
     wait_for_terminal(false)
@@ -76,6 +76,11 @@ PUB main() | success, value
     quietSensor() ' set pins to output low... so we can set LA trigger
 
     term.fstr0(string("\r\nMeasure Panel Started!\r\n\r\n"))
+
+    freqValue, freqValue2 := lightSensor.getClockFreq()
+    term.fstr1(string("Freq1: %d\r\n"), freqValue)
+    term.fstr1(string("Freq2: %d\r\n"), freqValue2)
+
 
     initSensor()    ' start our i2c light sensor
     'drivePinsForLATest()
@@ -86,7 +91,10 @@ PUB main() | success, value
     else
         term.fstr0(string("Power-on ERROR\r\n"))
 
+    term.fstr0(string("Measure then read sensor\r\n"))
     success, value := lightSensor.readOnce()
+    term.fstr1(string("Success: %d\r\n"), success)
+    term.fstr1(string("Value: %8x\r\n"), value)
 
     term.fstr0(string("\r\nDone\r\n"))
 
