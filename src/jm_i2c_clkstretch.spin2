@@ -7,7 +7,8 @@
 ''               -- see below for terms of use
 ''   E-mail..... jon.mcphalen@gmail.com
 ''   Started....
-''   Updated.... 30 JUN 2020
+''   Updated.... 18 DEC 2020
+''               -- implemented clock stretch
 ''
 '' =================================================================================================
 
@@ -43,19 +44,21 @@ pub null()
 
 '' This is not a top-level object
 
-
 pub getClockFreq() : freqValue, freqValue2
 
     freqValue := clkfreq
     freqValue2 := clktix
-
 
 pub quiesce(scl, sda, pullup)
 
 '' Define I2C SCL (clock) and SDA (data) pins
 '' -- pullup controls high level drive configuration of SCL and SDA
 
-  pullup := pullupFromSelector(pullup)
+  case pullup
+    PU_NONE : pullup := P_HIGH_FLOAT                            ' use external pull-up
+    PU_1K5  : pullup := P_HIGH_1K5                              ' 1.5k
+    PU_3K3  : pullup := P_HIGH_1MA                              ' acts like ~3.3k
+    other   : pullup := P_HIGH_15K                              ' 15K
 
   org
                 wrpin     pullup, scl                           ' configure high drive
@@ -72,7 +75,11 @@ pub setup(scl, sda, khz, pullup) | tix
   longmove(@sclpin, @scl, 2)                                    ' copy pins
   clktix := tix := (clkfreq / (khz * 1_000)) >> 2               ' calculate ticks in 1/4 period
 
-  pullup := pullupFromSelector(pullup)
+  case pullup
+    PU_NONE : pullup := P_HIGH_FLOAT                            ' use external pull-up
+    PU_1K5  : pullup := P_HIGH_1K5                              ' 1.5k
+    PU_3K3  : pullup := P_HIGH_1MA                              ' acts like ~3.3k
+    other   : pullup := P_HIGH_15K                              ' 15K
 
   org
                 wrpin     pullup, scl                           ' configure high drive
@@ -93,16 +100,6 @@ pub setup(scl, sda, khz, pullup) | tix
                  waitx    tix
 .done
   end
-
-
-pri pullupFromSelector(selector) : pullup
-    ' return actual value needed for selector given
-    ' (select pin config constant based on pullup choice)
-  case selector
-    PU_NONE : pullup := P_HIGH_FLOAT                            ' use external pull-up
-    PU_1K5  : pullup := P_HIGH_1K5                              ' 1.5k
-    PU_3K3  : pullup := P_HIGH_1MA                              ' acts like ~3.3k
-    other   : pullup := P_HIGH_15K                              ' 15K
 
 
 pub present(slaveid) : result
@@ -137,9 +134,6 @@ pub start() | scl, sda, tix
                 drvh      scl
                 waitx     tix
 
-                testp     scl                           wc      ' verify scl released
-    if_nc       jmp       $-1
-
                 drvl      sda                                   ' start sequence
                 waitx     tix
                 drvl      scl
@@ -147,7 +141,7 @@ pub start() | scl, sda, tix
   end
 
 
-pub write(i2cbyte) : ackbit | scl, sda, tix
+pub write(i2cbyte) : ackbit | scl, sda, tix, bits
 
 '' Write byte to I2C bus
 '' -- leaves SCL low
@@ -157,19 +151,24 @@ pub write(i2cbyte) : ackbit | scl, sda, tix
   org
                 shl       i2cbyte, #24                          ' align i2cbyte.[7] to i2cbyte.[31]
 
-.wr_byte        rep       #8, #8                                ' output 8 bits, msbfirst
-                 shl      i2cbyte, #1                   wc      ' msb --> c
-                 drvc     sda                                   ' c -- sda
-                 waitx    tix                                   ' let sda settle
-                 drvh     scl                                   ' scl high
-                 waitx    tix
-                 waitx    tix
-                 drvl     scl                                   ' scl low
-                 waitx    tix
+.wr_byte        mov       bits, #8                              ' output 8 bits, msbfirst
+.wb0            shl       i2cbyte, #1                   wc      ' msb --> c
+                drvc      sda                                   ' c -- sda
+                waitx     tix                                   ' let sda settle
+                drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
+                waitx     tix
+                waitx     tix
+                drvl      scl                                   ' scl low
+                waitx     tix
+                djnz      bits, #.wb0
 
 .get_ack        drvh      sda                                   ' pull-up sda
                 waitx     tix
                 drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
                 waitx     tix
                 testp     sda                           wc      ' sample sda (ack bit)
                 muxc      ackbit, #1                            ' update return value
@@ -180,7 +179,7 @@ pub write(i2cbyte) : ackbit | scl, sda, tix
   end
 
 
-pub wr_block(p_block, count) : ackbit | scl, sda, tix, i2cbyte
+pub wr_block(p_block, count) : ackbit | scl, sda, tix, i2cbyte, bits
 
 '' Write count bytes from p_block to I2C bus
 '' -- p_block is pointer to bytes
@@ -193,19 +192,24 @@ pub wr_block(p_block, count) : ackbit | scl, sda, tix, i2cbyte
                 add       p_block, #1                           ' increment block pointer
                 shl       i2cbyte, #24                          ' align i2cbyte.[7] to i2cbyte.[31]
 
-.wr_byte        rep       #8, #8                                ' output 8 bits, msbfirst
-                 shl      i2cbyte, #1                   wc      ' msb --> c
-                 drvc     sda                                   ' c -- sda
-                 waitx    tix                                   ' let sda settle
-                 drvh     scl                                   ' scl high
-                 waitx    tix
-                 waitx    tix
-                 drvl     scl                                   ' scl low
-                 waitx    tix
+.wr_byte        mov       bits, #8                              ' output 8 bits, msbfirst
+.wb0            shl       i2cbyte, #1                   wc      ' msb --> c
+                drvc      sda                                   ' c -- sda
+                waitx     tix                                   ' let sda settle
+                drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
+                waitx     tix
+                waitx     tix
+                drvl      scl                                   ' scl low
+                waitx     tix
+                djnz      bits, #.wb0
 
 .get_ack        drvh      sda                                   ' pull-up sda
                 waitx     tix
                 drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
                 waitx     tix
                 testp     sda                           wc      ' sample sda (ack bit)
     if_c        or        ackbit, #1                            ' update return value
@@ -218,7 +222,7 @@ pub wr_block(p_block, count) : ackbit | scl, sda, tix, i2cbyte
   end
 
 
-pub read(ackbit) : i2cbyte | scl, sda, tix
+pub read(ackbit) : i2cbyte | scl, sda, tix, bits
 
 '' Read byte from I2C bus
 '' -- ackbit is state of ack bit
@@ -229,21 +233,27 @@ pub read(ackbit) : i2cbyte | scl, sda, tix
   org
                 drvh      sda                                   ' pull-up sda
 
-.rd_byte        rep       #9, #8                                ' read 8 bits, msb first
-                 waitx    tix
-                 drvh     scl                                   ' scl high
-                 waitx    tix
-                 testp    sda                           wc      ' sample sda
-                 shl      i2cbyte, #1                           ' make room for new bit
-                 muxc     i2cbyte, #1                           ' sda --> i2cbyte.[0]
-                 waitx    tix
-                 drvl     scl                                   ' scl low
-                 waitx    tix
+.rd_byte        mov       bits, #8                              ' read 8 bits, msb first
+.rb0            waitx     tix
+                drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
+                waitx     tix
+                testp     sda                           wc      ' sample sda
+                shl       i2cbyte, #1                           ' make room for new bit
+                muxc      i2cbyte, #1                           ' sda --> i2cbyte.[0]
+                waitx     tix
+                drvl      scl                                   ' scl low
+                waitx     tix
+                djnz      bits, #.rb0
+
 
 .put_ack        testb     ackbit, #0                    wc      ' ackbit.[0] --> c
                 drvc      sda                                   ' c --> sda
                 waitx     tix                                   ' let sda settle
                 drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
                 waitx     tix
                 waitx     tix
                 drvl      scl                                   ' scl low
@@ -252,7 +262,7 @@ pub read(ackbit) : i2cbyte | scl, sda, tix
   end
 
 
-pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix
+pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix, bits
 
 '' Read count bytes from I2C bus
 '' -- p_block is pointer to storage location for bytes
@@ -264,16 +274,19 @@ pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix
 .rd_block       drvh      sda                                   ' pull-up sda
                 mov       i2cbyte, #0                           ' clear workspace
 
-.rd_byte        rep       #9, #8                                ' read 8 bits, msb first
-                 waitx    tix
-                 drvh     scl                                   ' scl high
-                 waitx    tix
-                 testp    sda                           wc      ' sample sda
-                 shl      i2cbyte, #1                           ' make room for new bit
-                 muxc     i2cbyte, #1                           ' sda --> i2cbyte.[0]
-                 waitx    tix
-                 drvl     scl                                   ' scl low
-                 waitx    tix
+.rd_byte        mov       bits, #8                              ' read 8 bits, msb first
+.rb0            waitx     tix
+                drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
+                waitx     tix
+                testp     sda                           wc      ' sample sda
+                shl       i2cbyte, #1                           ' make room for new bit
+                muxc      i2cbyte, #1                           ' sda --> i2cbyte.[0]
+                waitx     tix
+                drvl      scl                                   ' scl low
+                waitx     tix
+                djnz      bits, #.rb0
 
 .put_ack        cmp       count, #1                     wz      ' last byte?
     if_nz       drvl      sda                                   ' 0 --> sda (ack) if not last byte
@@ -281,6 +294,8 @@ pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix
     if_z        drvc      sda                                   ' last byte, c --> sda
                 waitx     tix                                   ' let sda settle
                 drvh      scl                                   ' scl high
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
                 waitx     tix
                 waitx     tix
                 drvl      scl                                   ' scl low
@@ -297,17 +312,16 @@ pub rd_block(p_block, count, ackbit) | i2cbyte, scl, sda, tix
 pub stop() | scl, sda, tix
 
 '' Create I2C stop sequence
-'' -- allows for clock stretch
 
   longmove(@scl, @sclpin, 3)                                    ' copy pins & timing
 
   org
                 drvl      sda                                   ' hold sda low
-                drvh      scl                                   ' release scl
                 waitx     tix
-
-                testp     scl                           wc      ' wait for scl to release
-    if_nc       jmp       $-1
+                drvh      scl                                   ' release scl
+                testp     scl                           wc      ' check for clock stretch
+    if_nc       jmp       #$-2
+                waitx     tix
 
                 waitx     tix
                 drvh      sda                                   ' finish stop sequence

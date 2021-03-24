@@ -68,33 +68,34 @@ OBJ { our sensors }
 
     lightSensor : "isp_bh1750"
 
-PUB main() | success, value, freqValue, freqValue2
+PUB main() | success, rawValue, lumen
 
     setup()
-    wait_for_terminal(false)
+    wait_for_terminal(true)
 
     quietSensor() ' set pins to output low... so we can set LA trigger
 
     term.fstr0(string("\r\nMeasure Panel Started!\r\n\r\n"))
 
-    freqValue, freqValue2 := lightSensor.getClockFreq()
-    term.fstr1(string("Freq1: %d\r\n"), freqValue)
-    term.fstr1(string("Freq2: %d\r\n"), freqValue2)
-
-
+    term.fstr0(string("Start()\r\n"))
     initSensor()    ' start our i2c light sensor
     'drivePinsForLATest()
 
+    'term.fstr0(string("\r\nDone\r\n"))
+    'return
+
+    term.fstr0(string("powerOn()\r\n"))
     success := lightSensor.powerOn()
     if(success)
-        term.fstr0(string("Power-on worked\r\n"))
+        term.fstr0(string(" - Power-on worked\r\n"))
     else
-        term.fstr0(string("Power-on ERROR\r\n"))
+        term.fstr0(string(" - Power-on ERROR\r\n"))
 
     term.fstr0(string("Measure then read sensor\r\n"))
-    success, value := lightSensor.readOnce()
-    term.fstr1(string("Success: %d\r\n"), success)
-    term.fstr1(string("Value: %8x\r\n"), value)
+    success, rawValue, lumen := lightSensor.readOnceHiRes2()
+    term.fstr1(string(" - Success: %d\r\n"), success)
+    term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
+    term.fstr1(string(" - lumen: %d\r\n"), lumen)
 
     term.fstr0(string("\r\nDone\r\n"))
 
@@ -104,21 +105,25 @@ PRI quietSensor()
     lightSensor.init()  ' set pins to output low... so we can set LA trigger
 
 
-PRI initSensor() | deviceFound
+PRI initSensor() | deviceFound, freqValue, freqValue2
 
     term.fstr0(string("Setup...\r\n"))
     lightSensor.setup()                                           ' i2c @ 100kHz, external pull-ups
 
+    freqValue, freqValue2 := lightSensor.getClockFreq()
+    term.fstr1(string(" - Freq1: %d\r\n"), freqValue)
+    term.fstr1(string(" - Tix: %d\r\n"), freqValue2)
+
     term.fstr0(string("ID Slave...\r\n"))
     deviceFound := lightSensor.idDevice()
     if(deviceFound == lightSensor.DVC_SLAVE0)
-        term.fstr0(string("Found SLAVE0\r\n"))
+        term.fstr0(string(" - Found SLAVE0\r\n"))
 
     elseif(deviceFound == lightSensor.DVC_SLAVE1)
-        term.fstr0(string("Found SLAVE1\r\n"))
+        term.fstr0(string(" - Found SLAVE1\r\n"))
 
     else
-        term.fstr0(string("Found no slaves\r\n"))
+        term.fstr0(string(" - Found NO slaves\r\n"))
 
 CON { pins for testing }
 
