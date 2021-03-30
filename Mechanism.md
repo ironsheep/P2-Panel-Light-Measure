@@ -1,19 +1,33 @@
-# P2-Panel-Light-Measure
-Using BH1750s to measure HUB75 Panel output - running on the Parallax P2 Processor
+#  Instrumenting the HUB75 Matrix for measurement
 
-![Project Maintenance][maintenance-shield]
-[![License][license-shield]](LICENSE) 
-
+Applying light sensors to our HUB75 Panels so we can directly measure emitted light.  To recap:
 The point of this project is to instrument our HUB75 panel with light sensors so we can directly measure the emitted light from our LEDs.  Our Goal is to identify 16 distinct grey scale value so we can imporove our color presentation of the panels.
 
 We hypothesize that this will force us to move from a simple PWM to a more advanced PWM that more closely mimics the light falloff curve.
 
-All of the driving of the panel, the measuring of the light values and reporting will take place on the Propeller 2 development hardware.
+[![License][license-shield]](LICENSE) 
 
-![ready to wire](images/ready4wiring.jpg)
-**FIG 1: Our panel waiting for wiring harness**
 
-## The project
+## The hardware
+
+## The fixture design
+
+![Modeling our BH1750 Fixture](images/3d-model.jpg)
+
+![](images/installing-bh1750.jpg)
+
+![](images/theShroud.jpg)
+
+
+
+## The fixture with BH1750 installed
+
+
+![](images/sensors-ready.jpg)
+
+![](images/thePanelMounts.jpg)
+
+
 
 
 ## License
