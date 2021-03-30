@@ -10,25 +10,41 @@ We hypothesize that this will force us to move from a simple PWM to a more advan
 
 ## The hardware
 
+For this project we are using three BH1750 ambient light sensors. These are wired up to a common I2C bus and each BH1750 has its own device enable line.  We want to be able to measure the LED light output unaffected by ambient light aound our testbench so we build a shroud to block out room light from between the RGB Matrix panel and the BH1750 sensor.  We 3D printed the shroud parts and mounted the BH1750's to the new shrouds which are in-turn clipped to the Matrix Panels.
+
 ## The fixture design
 
 ![Modeling our BH1750 Fixture](images/3d-model.jpg)
 
-![](images/installing-bh1750.jpg)
+**NOTE** the shroud opening is 24mm x 24mm to accommodate P2 (2mm), P3 (3mm), and P4 (4mm) distances between LEDs (as well as other multiples).
 
-![](images/theShroud.jpg)
+![Installing the BH1750](images/installing-bh1750.jpg)
+
+The shroud features M2 screw holes and voids where R,C parts interfere witht he PCB supports.
+
+![Interior design of the shroud](images/theShroud.jpg)
 
 
 
 ## The fixture with BH1750 installed
 
 
-![](images/sensors-ready.jpg)
+![Three assembled](images/sensors-ready.jpg)
 
-![](images/thePanelMounts.jpg)
+The three shrouds are assembled.
+
+![Mounted on panel](images/thePanelMounts.jpg)
 
 
+...And then clipped onto the panel, now ready for the wiring harness.
 
+---
+
+> If you like my work and/or this has helped you in some way then feel free to help me out for a couple of :coffee:'s or :pizza: slices! 
+> 
+> [![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ironsheep)
+
+---
 
 ## License
 
