@@ -11,7 +11,9 @@ We hypothesize that this will force us to move from a simple PWM to a more advan
 All of the driving of the panel, the measuring of the light values and reporting will take place on the Propeller 2 development hardware.
 
 ![ready to wire](images/ready4wiring.jpg)
-**FIG 1: Our panel waiting for wiring harness**
+**Fig 1 - Our panel waiting for wiring harness**
+
+See also [Fixture Mechanical Design](Mechanism.md)
 
 ## The project
 
