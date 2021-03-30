@@ -3,7 +3,7 @@
 Applying light sensors to our HUB75 Panels so we can directly measure emitted light.  To recap:
 The point of this project is to instrument our HUB75 panel with light sensors so we can directly measure the emitted light from our LEDs.  Our Goal is to identify 16 distinct grey scale value so we can imporove our color presentation of the panels.
 
-We hypothesize that this will force us to move from a simple PWM to a more advanced PWM that more closely mimics the light falloff curve.
+We hypothesize that this will force us to move from a simple PWM to a more advanced PWM.
 
 [![License][license-shield]](LICENSE) 
 

@@ -6,7 +6,7 @@ Using BH1750s to measure HUB75 Panel output - running on the Parallax P2 Process
 
 The point of this project is to instrument our HUB75 panel with light sensors so we can directly measure the emitted light from our LEDs.  Our Goal is to identify 16 distinct grey scale value so we can imporove our color presentation of the panels.
 
-We hypothesize that this will force us to move from a simple PWM to a more advanced PWM that more closely mimics the light falloff curve.
+We hypothesize that this will force us to move from a simple PWM to a more advanced PWM.
 
 All of the driving of the panel, the measuring of the light values and reporting will take place on the Propeller 2 development hardware.
 
