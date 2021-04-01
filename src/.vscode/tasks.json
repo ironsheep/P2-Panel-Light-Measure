@@ -7,13 +7,13 @@
             "label": "compileP2",
             "type": "shell",
     		  "osx": {
-                "command": "/Applications/FlexProp/bin/flexspin",
+                "command": "flexspin",
     		  },
     		  "windows": {
-                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\flexspin.exe",
+                "command": "flexspin.exe",
     		  },
     		  "linux": {
-                "command": "/opt/flexprop/bin/flexspin",
+                "command": "flexspin",
     		  },
             "args": [
                 "-2",
@@ -45,13 +45,13 @@
             "label": "compileTopP2",
             "type": "shell",
             "osx": {
-                "command": "/Applications/FlexProp/bin/flexspin",
+                "command": "flexspin",
             },
             "windows": {
-                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\flexspin.exe",
+                "command": "flexspin.exe",
             },
             "linux": {
-                "command": "/opt/flexprop/bin/flexspin",
+                "command": "flexspin",
             },
             "args": [
                 "-2",
@@ -79,13 +79,13 @@
             "label": "downloadP2",
             "type": "shell",
             "osx": {
-                "command": "/Applications/FlexProp/bin/loadp2",
+                "command": "loadp2",
             },
             "windows": {
-                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\loadp2.exe",
+                "command": "loadp2.exe",
             },
             "linux": {
-                "command": "/opt/flexprop/bin/loadp2",
+                "command": "loadp2",
             },
             "problemMatcher": [],
             "presentation": {
