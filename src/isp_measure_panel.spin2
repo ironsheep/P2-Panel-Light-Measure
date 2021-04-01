@@ -42,6 +42,13 @@ CON { fixed io pins }
 
 CON { app io pins }
 
+    PIN_BH1750_SCL  = 8     '16    ' blue      | Orange
+    PIN_BH1750_SDA  = 9     ' 17    ' yellow    | Yellow
+    PIN_BH1750_ADDR0 = 10   ' 18    ' dk grn    | Green
+    PIN_BH1750_ADDR1 = 11   ' 19    ' dk grn    | Green
+    PIN_BH1750_ADDR2 = 12   ' 20    ' dk grn    | Green
+
+    MAX_BH1750s = 3
 
 CON { basic constants }
 
@@ -55,18 +62,17 @@ CON { basic constants }
   STYLE = S_MATRIX                                              ' selected style
 
 
-obj
-
-  i2c  : "jm_i2c"                                               ' i2c bus driver
-  term : "jm_serial"                                            ' terminal output
-
-
-VAR
+VAR { meas sys global vars }
     long    cog
 
-OBJ { our sensors }
+OBJ { our devices }
 
-    lightSensor : "isp_bh1750"
+    term                        : "jm_serial"                                            ' terminal output
+    color                       : "isp_hub75_color"
+    pixels                      : "isp_hub75_screenUtils"
+    screen                      : "isp_hub75_screenAccess"
+    display                     : "isp_hub75_display"
+    lightSensor[MAX_BH1750s]    : "isp_bh1750"
 
 PUB main() | success, rawValue, lumen
 

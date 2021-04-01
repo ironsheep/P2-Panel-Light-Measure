@@ -55,31 +55,34 @@ OBJ { objects used }
 
 VAR { device state information }
 
+    long  pinSCL
+    long  pinSDA
+    long  pinADDR
     long  slaveAddress
 
 PUB null()
 
 '' This is not a top-level object
-PUB init()
+
+PUB init(sda, scl, cs)
     '' init the output pins (quiet the device)
+    pinSDA := sda
+    pinSCL := scl
+    pinADDR := cs
     'pinfloat(PIN_BH1750_ADDR)   ' slave1
     'wrpin(PIN_BH1750_ADDR, P_HIGH_1MA)
-    'pinl(PIN_BH1750_ADDR)   ' nothing found
-    'pinfloat(PIN_BH1750_ADDR)   ' nothing found
-    pinh(PIN_BH1750_ADDR)   ' Slave1!
+    pinh(pinADDR)   ' slave0?
 
-    ' have the driver force its own pins quiet : PU_NONE, PU_1K5, PU_3K3, PU_15K
-    i2c_bus.quiesce(PIN_BH1750_SCL, PIN_BH1750_SDA, i2c_bus.PU_1K5)
+    ' have the driver force its own pins quiet
+    i2c_bus.quiesce(pinSCL, pinSDA, i2c_bus.PU_3K3)
 
 pub getClockFreq() : freqValue, freqValue2
     '' return clock frequency and and tic's for 1/4 period
     freqValue, freqValue2 := i2c_bus.getClockFreq()
 
-
 PUB setup()
     '' configure driver specifics for BH1750
-    i2c_bus.setup(PIN_BH1750_SCL, PIN_BH1750_SDA, bh1750_speed_khz, i2c_bus.PU_1K5)
-
+    i2c_bus.setup(pinSCL, pinSDA, bh1750_speed_khz, i2c_bus.PU_3K3)
 
 PUB idDevice() : deviceFound | have0, have1
     '' scan I2C bus seeing if we have a responding device
