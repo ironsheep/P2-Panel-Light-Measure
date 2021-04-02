@@ -13,7 +13,8 @@
 
 CON { timing }
 
-  CLK_FREQ = 200_000_000                                        ' system freq as a constant
+  'CLK_FREQ = 200_000_000                                        ' system freq as a constant
+  CLK_FREQ = 335_000_000                                        ' system freq as a constant 2.985 nSec
   MS_001   = CLK_FREQ / 1_000                                   ' ticks in 1ms
   US_001   = CLK_FREQ / 1_000_000                               ' ticks in 1us
 
@@ -77,6 +78,15 @@ OBJ { our devices }
 PUB main() | success, rawValue, lumen
 
     setup()
+
+    'demoAlignmentText()
+    display.clearScreen()
+    'display.drawBoxOfColor(0, 0, 64, 16, TRUE, color.cFullBlue)
+    'display.drawBoxOfColor(16, 0, 64, 16, TRUE, color.cFullRed)
+    display.fillScreen(color.cWhite)    ' full single color panel w/PWM
+    display.commitScreenToPanel()
+
+
     wait_for_terminal(true)
 
     quietSensor() ' set pins to output low... so we can set LA trigger
@@ -106,9 +116,17 @@ PUB main() | success, rawValue, lumen
     term.fstr0(string("\r\nDone\r\n"))
 
 
-PRI quietSensor()
+PRI stop()
+    ' Stop the driver
+    if cog
+        display.stop()
+        cog := 0
 
-    lightSensor.init()  ' set pins to output low... so we can set LA trigger
+
+PRI quietSensor()
+    lightSensor[0].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR0)  ' set pins to output low... so we can set LA trigger
+    lightSensor[1].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR1)  ' set pins to output low... so we can set LA trigger
+    lightSensor[2].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR2)  ' set pins to output low... so we can set LA trigger
 
 
 PRI initSensor() | deviceFound, freqValue, freqValue2
@@ -131,11 +149,6 @@ PRI initSensor() | deviceFound, freqValue, freqValue2
     else
         term.fstr0(string(" - Found NO slaves\r\n"))
 
-CON { pins for testing }
-
-    PIN_BH1750_SCL  = 16    ' blue
-    PIN_BH1750_SDA  = 17    ' yellow
-    PIN_BH1750_ADDR = 18    ' dk grn
 
 PRI drivePinsForLATest() | index
     '' see if we have LA wired up correctly...
@@ -144,12 +157,30 @@ PRI drivePinsForLATest() | index
         if (index // 2 == 0)
             pintoggle(PIN_BH1750_SDA)
         if (index // 3 == 0)
-            pintoggle(PIN_BH1750_ADDR)
+            pintoggle(PIN_BH1750_ADDR0)
+        if (index // 4 == 0)
+            pintoggle(PIN_BH1750_ADDR1)
+        if (index // 5 == 0)
+            pintoggle(PIN_BH1750_ADDR2)
+
+PRI demoAlignmentText()
+    display.setTextFont(display.TEXT_FONT_5x7)    ' font size
+    display.setCursor(0, 0)   ' start at top left, with one pixel of spacing
+    display.setColoredTextAtLnCol(0, 0, string("Line 1"), color.cBlue)
+    display.setColoredTextAtLnCol(1, 0, string("Propeller"), color.cBlue)
+    display.setColoredTextAtLnCol(2, 0, string("Propeller2"), color.cBlue)
+    display.setColoredTextAtLnCol(3, 0, string("Line 4"), color.cBlue)
+    display.commitScreenToPanel()
 
 
-PRI setup()
+PRI setup(): ok
+    ' setup our devices
+    term.start(BR_TERM)                                           ' start terminal io
 
-  term.start(BR_TERM)                                           ' start terminal io
+    ok := cog := display.start()   ' send buffer to driver
+    if ok == -1
+        debug("- Measure: underlying drivers failed!")
+        abort
 
 
 PRI wait_for_terminal(clear)

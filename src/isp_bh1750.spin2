@@ -10,11 +10,11 @@
 ''   Updated.... 19 Mar 2021
 ''
 '' =================================================================================================
-CON { pins for BH1750 }
+CON { constants for BH1750 }
 
-    PIN_BH1750_SCL  = 16    ' blue
-    PIN_BH1750_SDA  = 17    ' yellow
-    PIN_BH1750_ADDR = 18    ' dk grn
+    'PIN_BH1750_SCL  = 16    ' blue
+    'PIN_BH1750_SDA  = 17    ' yellow
+    'PIN_BH1750_ADDR = 18    ' dk grn
 
     'bh1750_speed_khz = 80  ' 80 kHz
     'bh1750_speed_khz = 100  ' 100 kHz (meas: @99.2kHz)
@@ -71,7 +71,7 @@ PUB init(sda, scl, cs)
     pinADDR := cs
     'pinfloat(PIN_BH1750_ADDR)   ' slave1
     'wrpin(PIN_BH1750_ADDR, P_HIGH_1MA)
-    pinh(pinADDR)   ' slave0?
+    pinfloat(pinADDR)   ' slave0?
 
     ' have the driver force its own pins quiet
     i2c_bus.quiesce(pinSCL, pinSDA, i2c_bus.PU_3K3)
