@@ -8,5 +8,6 @@
         "**/*.p2asm": true,
         "**/*.binary": true
     },
+    "topLevel": "isp_measure_panel",
     "explorerExclude.backup": null
 }
