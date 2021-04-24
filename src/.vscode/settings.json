@@ -6,7 +6,12 @@
         "**/CVS": true,
         "**/.DS_Store": true,
         "**/*.p2asm": true,
-        "**/*.binary": true
+        "**/*.binary": true,
+        "**/*.txt": true,
+        "**/*.obj": true,
+        "**/*.lst": true,
+        "**/*.bin": true,
+        "**/*.bin2": true
     },
     "topLevel": "isp_measure_panel",
     "explorerExclude.backup": null

@@ -82,10 +82,14 @@ pub getClockFreq() : freqValue, freqValue2
 
 PUB setup()
     '' configure driver specifics for BH1750
+    pinlow(pinADDR)   ' enable our device
     i2c_bus.setup(pinSCL, pinSDA, bh1750_speed_khz, i2c_bus.PU_3K3)
+    pinfloat(pinADDR)   ' disable our device
 
 PUB idDevice() : deviceFound | have0, have1
     '' scan I2C bus seeing if we have a responding device
+    pinlow(pinADDR)   ' enable our device
+
     have0 := have1 := false
     if(i2c_bus.present((DVC_SLAVE1_ADDR << 1) | MODE_WRITE))
         have1 := true
@@ -102,6 +106,8 @@ PUB idDevice() : deviceFound | have0, have1
         slaveAddress := DVC_SLAVE1_ADDR
     i2c_bus.stop()
 
+    pinfloat(pinADDR)   ' disable our device
+
 PUB powerOn() : ok | ackBit
     '' command the device to go to power-on state
     ok := doCommand(CMD_PWR_ON)
@@ -112,6 +118,7 @@ PUB resetDvc() : ok | ackBit
 
 PRI doCommand(cmdByte): ok | ackbit
     ' write command to device - checking response
+    pinlow(pinADDR)   ' enable our device
     ok := false
     i2c_bus.start()
     ackBit := i2c_bus.write((slaveAddress << 1) | MODE_WRITE)
@@ -120,6 +127,7 @@ PRI doCommand(cmdByte): ok | ackbit
     if(ackbit == i2c_bus.ACK)
         ok := true
     i2c_bus.stop()
+    pinfloat(pinADDR)   ' disable our device
 
 
 PUB readOnceHiRes() : ok, rawValue, lumen | ackBit
@@ -139,6 +147,7 @@ PUB readOnceLoRes() : ok, rawValue, lumen | ackBit
 
 PRI readMeasurementResult(command)  : ok, rawValue, lumen | ackBit, delayToRead
     lumen := rawValue := 0
+    pinlow(pinADDR)   ' enable our device
 
     delayToRead := delayFromCommand(command)
     ok := doCommand(command)
@@ -150,6 +159,7 @@ PRI readMeasurementResult(command)  : ok, rawValue, lumen | ackBit, delayToRead
     rawValue.byte[1] := i2c_bus.read(i2c_bus.ACK)
     rawValue.byte[0] := i2c_bus.read(i2c_bus.NAK)
     i2c_bus.stop()
+    pinfloat(pinADDR)   ' disable our device
 
     lumen := (rawValue * 10) / 12
 
@@ -169,6 +179,7 @@ pri delayFromCommand(command) : delay_ms
 
 PUB readContinuous() : ok | ackBit
     '' UNTESTED...
+    pinlow(pinADDR)   ' enable our device
     ok := false
     i2c_bus.start()
     ackBit := i2c_bus.write(slaveAddress)
@@ -177,6 +188,7 @@ PUB readContinuous() : ok | ackBit
     if(ackbit)
         ok := true
     i2c_bus.stop()
+    pinfloat(pinADDR)   ' disable our device
 
 CON { license }
 

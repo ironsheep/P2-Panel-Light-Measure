@@ -101,14 +101,14 @@ PUB main() | success, rawValue, lumen
     'return
 
     term.fstr0(string("powerOn()\r\n"))
-    success := lightSensor.powerOn()
+    success := lightSensor[0].powerOn()
     if(success)
         term.fstr0(string(" - Power-on worked\r\n"))
     else
         term.fstr0(string(" - Power-on ERROR\r\n"))
 
     term.fstr0(string("Measure then read sensor\r\n"))
-    success, rawValue, lumen := lightSensor.readOnceHiRes2()
+    success, rawValue, lumen := lightSensor[0].readOnceHiRes2()
     term.fstr1(string(" - Success: %d\r\n"), success)
     term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
     term.fstr1(string(" - lumen: %d\r\n"), lumen)
@@ -129,29 +129,40 @@ PRI quietSensor()
     lightSensor[2].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR2)  ' set pins to output low... so we can set LA trigger
 
 
-PRI initSensor() | deviceFound, freqValue, freqValue2
+PRI initSensor() | device0Found, device1Found, device2Found, freqValue, freqValue2
 
     term.fstr0(string("Setup...\r\n"))
-    lightSensor.setup()                                           ' i2c @ 100kHz, external pull-ups
+    lightSensor[0].setup()                                           ' i2c @ 100kHz, external pull-ups
+    lightSensor[1].setup()                                           ' i2c @ 100kHz, external pull-ups
+    lightSensor[2].setup()                                           ' i2c @ 100kHz, external pull-ups
 
-    freqValue, freqValue2 := lightSensor.getClockFreq()
+    freqValue, freqValue2 := lightSensor[0].getClockFreq()
     term.fstr1(string(" - Freq1: %d\r\n"), freqValue)
     term.fstr1(string(" - Tix: %d\r\n"), freqValue2)
 
     term.fstr0(string("ID Slave...\r\n"))
-    deviceFound := lightSensor.idDevice()
+    device0Found := lightSensor[0].idDevice()
+    describeDevice(string("sensor0"), device0Found)
+    device1Found := lightSensor[1].idDevice()
+    describeDevice(string("sensor1"), device0Found)
+    device2Found := lightSensor[2].idDevice()
+    describeDevice(string("sensor2"), device0Found)
+
+PRI describeDevice(message, deviceFound) | findingMessage
+    ' present info on device we found
     if(deviceFound == lightSensor.DVC_SLAVE0)
-        term.fstr0(string(" - Found SLAVE0\r\n"))
+        findingMessage := string("Found SLAVE0")
 
     elseif(deviceFound == lightSensor.DVC_SLAVE1)
-        term.fstr0(string(" - Found SLAVE1\r\n"))
+        findingMessage := string("Found SLAVE1")
 
     else
-        term.fstr0(string(" - Found NO slaves\r\n"))
+        findingMessage := string("NO slaves Found")
 
+    term.fstr2(string(" - %s: %s\r\n"), message, findingMessage)
 
 PRI drivePinsForLATest() | index
-    '' see if we have LA wired up correctly...
+    ' see if we have LA wired up correctly...
     repeat index from 0 to 1000
         pintoggle(PIN_BH1750_SCL)
         if (index // 2 == 0)
@@ -164,6 +175,7 @@ PRI drivePinsForLATest() | index
             pintoggle(PIN_BH1750_ADDR2)
 
 PRI demoAlignmentText()
+    ' put some text on screen
     display.setTextFont(display.TEXT_FONT_5x7)    ' font size
     display.setCursor(0, 0)   ' start at top left, with one pixel of spacing
     display.setColoredTextAtLnCol(0, 0, string("Line 1"), color.cBlue)
@@ -184,7 +196,6 @@ PRI setup(): ok
 
 
 PRI wait_for_terminal(clear)
-
   ' Download to RAM with F10
   ' F12 to open PST
   ' Click [Enable]
