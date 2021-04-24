@@ -543,6 +543,22 @@ VAR { buffer addresses }
     long    driverConfigRaw
     long    pScreenInMemory
 
+PUB setPWMbitsforRGB(red16Bits, green16Bits, blue16Bits) | maskBit, bitIndex, bitsBGR, blueBit, greenBit, redBit, pPwmFrameSet, pPwmFrame
+    '' write PWM bit pattern to buffer for display so we can measure output
+    '' - 16 bits are PWM mask for each color
+    pPwmFrameSet := getActivePwmBuffer()
+    repeat bitIndex from 0 to 15
+        maskBit := 1 << bitIndex
+        blueBit := ((blue16Bits & maskBit) > 0) ? 1 : 0
+        redBit := ((red16Bits & maskBit) > 0) ? 1 : 0
+        greenBit := ((green16Bits & maskBit) > 0) ? 1 : 0
+        bitsBGR := (blueBit << 2) | (greenBit << 1) | redBit
+        bitsBGR := bitsBGR | bitsBGR << 3   ' make into [0,0,bgr,bgr] byte for PWM buffer
+        pPwmFrame := @byte[pPwmFrameSet][bitIndex * screen.MAX_PWM_FRAME_SIZE_IN_BYTES]
+        bytefill(pPwmFrame, bitsBGR, screen.MAX_PWM_FRAME_SIZE_IN_BYTES)
+    matrix.writePwmBuffer(pPwmFrameSet)
+
+
 PRI setPanelColorBitsForRC(pPwmFrame, nPanelRow, nPanelCol, rBit, gBit, bBit) | nBffrR, nBffrC, isRGB2, byteIdx, maskBitsBGR, bitsBGR, currPwmColorBits, showDebug
     '  write color bits to a PWM frame at frame[r][c]
     nBffrR := 0 #> nPanelRow <# screen.MAX_PHYSICAL_ROWS - 1

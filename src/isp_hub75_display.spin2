@@ -126,6 +126,10 @@ PUB fillPanel(threeBitColor)
     '' Fill screen but without PWM (for testing underlying driver)
     panel.fillPanel(threeBitColor)
 
+PUB testSetPWMbitsforRGB(red16Bits, green16Bits, blue16Bits)
+    '' write PWM bit pattern to buffer for display so we can measure output
+    panel.setPWMbitsforRGB(red16Bits, green16Bits, blue16Bits)
+
 PUB commitScreenToPanel()
     '' Write sceen to panel driver PWM frames (while alternating PWM frame sets)
     'debug("dsp: commit!")

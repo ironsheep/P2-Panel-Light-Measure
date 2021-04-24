@@ -75,7 +75,7 @@ OBJ { our devices }
     display                     : "isp_hub75_display"
     lightSensor[MAX_BH1750s]    : "isp_bh1750"
 
-PUB main() | success, rawValue, lumen
+PUB main() | success, red, green, blue
 
     setup()
 
@@ -83,8 +83,14 @@ PUB main() | success, rawValue, lumen
     display.clearScreen()
     'display.drawBoxOfColor(0, 0, 64, 16, TRUE, color.cFullBlue)
     'display.drawBoxOfColor(16, 0, 64, 16, TRUE, color.cFullRed)
-    display.fillScreen(color.cWhite)    ' full single color panel w/PWM
+    display.fillScreen(color.cGray)    ' full single color panel w/PWM
     display.commitScreenToPanel()
+
+    red := %0000_0011_0000_0011
+    green := %0000_0000_0000_0000
+    blue := %0000_0000_0000_0000
+
+    display.testSetPWMbitsforRGB(red, green, blue)
 
 
     wait_for_terminal(true)
@@ -94,27 +100,35 @@ PUB main() | success, rawValue, lumen
     term.fstr0(string("\r\nMeasure Panel Started!\r\n\r\n"))
 
     term.fstr0(string("Start()\r\n"))
-    initSensor()    ' start our i2c light sensor
+    initSensors()    ' start our i2c light sensor
     'drivePinsForLATest()
 
     'term.fstr0(string("\r\nDone\r\n"))
     'return
 
-    term.fstr0(string("powerOn()\r\n"))
-    success := lightSensor[0].powerOn()
-    if(success)
-        term.fstr0(string(" - Power-on worked\r\n"))
-    else
-        term.fstr0(string(" - Power-on ERROR\r\n"))
-
-    term.fstr0(string("Measure then read sensor\r\n"))
-    success, rawValue, lumen := lightSensor[0].readOnceHiRes2()
-    term.fstr1(string(" - Success: %d\r\n"), success)
-    term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
-    term.fstr1(string(" - lumen: %d\r\n"), lumen)
+    powerOnSensors()
+    measureSensors()
 
     term.fstr0(string("\r\nDone\r\n"))
 
+PRI powerOnSensors() | sensorIndex, success
+
+    repeat sensorIndex from 0 to 2
+        term.fstr1(string("power-on sensor #%d\r\n"), sensorIndex)
+        success := lightSensor[sensorIndex].powerOn()
+        if(success)
+            term.fstr1(string(" - Power-on #%d worked\r\n"), sensorIndex)
+        else
+            term.fstr1(string(" - Power-on #%d ERROR\r\n"), sensorIndex)
+
+PRI measureSensors() | sensorIndex, success, rawValue, lumen
+
+    repeat sensorIndex from 0 to 2
+        term.fstr1(string("Measure then read sensor #%d\r\n"), sensorIndex)
+        success, rawValue, lumen := lightSensor[sensorIndex].readOnceHiRes2()
+        term.fstr1(string(" - Success: %d\r\n"), success)
+        term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
+        term.fstr1(string(" - lumen: %d\r\n\r\n"), lumen)
 
 PRI stop()
     ' Stop the driver
@@ -129,7 +143,7 @@ PRI quietSensor()
     lightSensor[2].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR2)  ' set pins to output low... so we can set LA trigger
 
 
-PRI initSensor() | device0Found, device1Found, device2Found, freqValue, freqValue2
+PRI initSensors() | device0Found, device1Found, device2Found, freqValue, freqValue2
 
     term.fstr0(string("Setup...\r\n"))
     lightSensor[0].setup()                                           ' i2c @ 100kHz, external pull-ups

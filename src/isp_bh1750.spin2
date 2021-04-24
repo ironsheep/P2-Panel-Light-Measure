@@ -16,11 +16,12 @@ CON { constants for BH1750 }
     'PIN_BH1750_SDA  = 17    ' yellow
     'PIN_BH1750_ADDR = 18    ' dk grn
 
-    'bh1750_speed_khz = 80  ' 80 kHz
-    'bh1750_speed_khz = 100  ' 100 kHz (meas: @99.2kHz)
-    'bh1750_speed_khz = 200  ' 200 kHz (meas: @197kHz)
-    'bh1750_speed_khz = 300  ' 300 kHz (meas: @291kHz)
-    bh1750_speed_khz = 309  ' 300 kHz (meas: @301kHz)
+    'BH1750_SPEED_khz = 80  ' 80 kHz
+    'BH1750_SPEED_khz = 100  ' 100 kHz (meas: @99.2kHz)
+    'BH1750_SPEED_khz = 200  ' 200 kHz (meas: @197kHz)
+    'BH1750_SPEED_khz = 300  ' 300 kHz (meas: @291kHz)
+    BH1750_SPEED_khz = 309  ' 300 kHz (meas: @301kHz)
+    BH1750_PULL_UP = i2c_bus.PU_3K3
 
     DVC_SLAVE_UNKNOWN = 0
     DVC_SLAVE1_ADDR = %101_1100  ' 0x5c
@@ -49,6 +50,7 @@ CON { BH1750 commands }
     MODE_READ  = %0000_0001
     MODE_WRITE = %0000_0000
 
+
 OBJ { objects used }
 
     i2c_bus : "jm_i2c"
@@ -64,17 +66,25 @@ PUB null()
 
 '' This is not a top-level object
 
-PUB init(sda, scl, cs)
+PUB init(sda, scl, cs) | pullup
     '' init the output pins (quiet the device)
     pinSDA := sda
     pinSCL := scl
     pinADDR := cs
-    'pinfloat(PIN_BH1750_ADDR)   ' slave1
-    'wrpin(PIN_BH1750_ADDR, P_HIGH_1MA)
-    pinfloat(pinADDR)   ' slave0?
+{
+    pullup := BH1750_PULL_UP
+
+    org
+        wrpin     pullup, cs                           ' configure high drive
+    end
+}
+    'pinhigh(PIN_BH1750_ADDR)   ' slave1
+    'wrpin(pinADDR, P_HIGH_1MA)
+
+    deselect()   ' deassert
 
     ' have the driver force its own pins quiet
-    i2c_bus.quiesce(pinSCL, pinSDA, i2c_bus.PU_3K3)
+    i2c_bus.quiesce(pinSCL, pinSDA, BH1750_PULL_UP)
 
 pub getClockFreq() : freqValue, freqValue2
     '' return clock frequency and and tic's for 1/4 period
@@ -82,19 +92,25 @@ pub getClockFreq() : freqValue, freqValue2
 
 PUB setup()
     '' configure driver specifics for BH1750
-    pinlow(pinADDR)   ' enable our device
-    i2c_bus.setup(pinSCL, pinSDA, bh1750_speed_khz, i2c_bus.PU_3K3)
-    pinfloat(pinADDR)   ' disable our device
+    select()   ' awaken our device
+
+    i2c_bus.setup(pinSCL, pinSDA, BH1750_SPEED_khz, BH1750_PULL_UP)
+
+    deselect()   ' no longer need our device
 
 PUB idDevice() : deviceFound | have0, have1
     '' scan I2C bus seeing if we have a responding device
-    pinlow(pinADDR)   ' enable our device
+    select()   ' awaken our device
 
     have0 := have1 := false
-    if(i2c_bus.present((DVC_SLAVE1_ADDR << 1) | MODE_WRITE))
-        have1 := true
+    'if(i2c_bus.present((DVC_SLAVE1_ADDR << 1) | MODE_WRITE))
+    '    have1 := true
     if(i2c_bus.present((DVC_SLAVE0_ADDR << 1) | MODE_WRITE))
         have0 := true
+
+    i2c_bus.stop()
+
+    deselect()   ' no longer need our device
 
     deviceFound := DVC_NOT_FOUND
     slaveAddress := DVC_SLAVE_UNKNOWN
@@ -103,10 +119,17 @@ PUB idDevice() : deviceFound | have0, have1
         slaveAddress := DVC_SLAVE1_ADDR
     elseif(have0 and !have1)
         deviceFound := DVC_SLAVE0
-        slaveAddress := DVC_SLAVE1_ADDR
-    i2c_bus.stop()
+        slaveAddress := DVC_SLAVE0_ADDR
 
-    pinfloat(pinADDR)   ' disable our device
+PRI select()
+    ' select our device so we can talk to it
+    pinlow(pinADDR)   ' enable our device
+    waitms(1)           ' provide a settling time
+
+PRI deselect()
+    ' deselect our device, we no longer need it
+    waitms(1)           ' short-delay to de-asser
+    pinhigh(pinADDR)   ' disable our device
 
 PUB powerOn() : ok | ackBit
     '' command the device to go to power-on state
@@ -118,7 +141,7 @@ PUB resetDvc() : ok | ackBit
 
 PRI doCommand(cmdByte): ok | ackbit
     ' write command to device - checking response
-    pinlow(pinADDR)   ' enable our device
+    select()   ' awaken our device
     ok := false
     i2c_bus.start()
     ackBit := i2c_bus.write((slaveAddress << 1) | MODE_WRITE)
@@ -127,7 +150,7 @@ PRI doCommand(cmdByte): ok | ackbit
     if(ackbit == i2c_bus.ACK)
         ok := true
     i2c_bus.stop()
-    pinfloat(pinADDR)   ' disable our device
+    deselect()   ' no longer need our device
 
 
 PUB readOnceHiRes() : ok, rawValue, lumen | ackBit
@@ -144,13 +167,24 @@ PUB readOnceLoRes() : ok, rawValue, lumen | ackBit
     '' read measurement result - LoRes
     ok, rawValue, lumen := readMeasurementResult(CMD_MEAS_ONCE_LRES_MODE)
 
+PRI doSubCommand(cmdByte): ok | ackbit
+    ' write command to device - checking response
+    ok := false
+    i2c_bus.start()
+    ackBit := i2c_bus.write((slaveAddress << 1) | MODE_WRITE)
+    'if(ackbit)
+    ackBit := i2c_bus.write(cmdByte)
+    if(ackbit == i2c_bus.ACK)
+        ok := true
+    i2c_bus.stop()
+
 
 PRI readMeasurementResult(command)  : ok, rawValue, lumen | ackBit, delayToRead
     lumen := rawValue := 0
-    pinlow(pinADDR)   ' enable our device
+    select()   ' awaken our device
 
     delayToRead := delayFromCommand(command)
-    ok := doCommand(command)
+    ok := doSubCommand(command)
     waitms(delayToRead)         ' wait for meas complete
 
     i2c_bus.start()
@@ -159,7 +193,7 @@ PRI readMeasurementResult(command)  : ok, rawValue, lumen | ackBit, delayToRead
     rawValue.byte[1] := i2c_bus.read(i2c_bus.ACK)
     rawValue.byte[0] := i2c_bus.read(i2c_bus.NAK)
     i2c_bus.stop()
-    pinfloat(pinADDR)   ' disable our device
+    deselect()   ' no longer need our device
 
     lumen := (rawValue * 10) / 12
 
@@ -179,7 +213,7 @@ pri delayFromCommand(command) : delay_ms
 
 PUB readContinuous() : ok | ackBit
     '' UNTESTED...
-    pinlow(pinADDR)   ' enable our device
+    select()   ' awaken our device
     ok := false
     i2c_bus.start()
     ackBit := i2c_bus.write(slaveAddress)
@@ -188,7 +222,7 @@ PUB readContinuous() : ok | ackBit
     if(ackbit)
         ok := true
     i2c_bus.stop()
-    pinfloat(pinADDR)   ' disable our device
+    deselect()   ' no longer need our device
 
 CON { license }
 
