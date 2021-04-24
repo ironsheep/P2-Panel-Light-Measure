@@ -13,7 +13,8 @@
 
 CON { timing }
 
-  CLK_FREQ = 200_000_000                                        ' system freq as a constant
+  'CLK_FREQ = 200_000_000                                        ' system freq as a constant
+  CLK_FREQ = 335_000_000                                        ' system freq as a constant 2.985 nSec
   MS_001   = CLK_FREQ / 1_000                                   ' ticks in 1ms
   US_001   = CLK_FREQ / 1_000_000                               ' ticks in 1us
 
@@ -42,6 +43,13 @@ CON { fixed io pins }
 
 CON { app io pins }
 
+    PIN_BH1750_SCL  = 8     '16    ' blue      | Orange
+    PIN_BH1750_SDA  = 9     ' 17    ' yellow    | Yellow
+    PIN_BH1750_ADDR0 = 10   ' 18    ' dk grn    | Green
+    PIN_BH1750_ADDR1 = 11   ' 19    ' dk grn    | Green
+    PIN_BH1750_ADDR2 = 12   ' 20    ' dk grn    | Green
+
+    MAX_BH1750s = 3
 
 CON { basic constants }
 
@@ -55,76 +63,92 @@ CON { basic constants }
   STYLE = S_MATRIX                                              ' selected style
 
 
-obj
-
-  i2c  : "jm_i2c"                                               ' i2c bus driver
-  term : "jm_serial"                                            ' terminal output
-
-
-VAR
+VAR { meas sys global vars }
     long    cog
 
-OBJ { our sensors }
+OBJ { our devices }
 
-    lightSensor : "isp_bh1750"
+    term                        : "jm_serial"                                            ' terminal output
+    color                       : "isp_hub75_color"
+    pixels                      : "isp_hub75_screenUtils"
+    screen                      : "isp_hub75_screenAccess"
+    display                     : "isp_hub75_display"
+    lightSensor[MAX_BH1750s]    : "isp_bh1750"
 
-PUB main() | success, value, freqValue, freqValue2
+PUB main() | success, rawValue, lumen
 
     setup()
-    wait_for_terminal(false)
+
+    'demoAlignmentText()
+    display.clearScreen()
+    'display.drawBoxOfColor(0, 0, 64, 16, TRUE, color.cFullBlue)
+    'display.drawBoxOfColor(16, 0, 64, 16, TRUE, color.cFullRed)
+    display.fillScreen(color.cWhite)    ' full single color panel w/PWM
+    display.commitScreenToPanel()
+
+
+    wait_for_terminal(true)
 
     quietSensor() ' set pins to output low... so we can set LA trigger
 
     term.fstr0(string("\r\nMeasure Panel Started!\r\n\r\n"))
 
-    freqValue, freqValue2 := lightSensor.getClockFreq()
-    term.fstr1(string("Freq1: %d\r\n"), freqValue)
-    term.fstr1(string("Freq2: %d\r\n"), freqValue2)
-
-
+    term.fstr0(string("Start()\r\n"))
     initSensor()    ' start our i2c light sensor
     'drivePinsForLATest()
 
+    'term.fstr0(string("\r\nDone\r\n"))
+    'return
+
+    term.fstr0(string("powerOn()\r\n"))
     success := lightSensor.powerOn()
     if(success)
-        term.fstr0(string("Power-on worked\r\n"))
+        term.fstr0(string(" - Power-on worked\r\n"))
     else
-        term.fstr0(string("Power-on ERROR\r\n"))
+        term.fstr0(string(" - Power-on ERROR\r\n"))
 
     term.fstr0(string("Measure then read sensor\r\n"))
-    success, value := lightSensor.readOnce()
-    term.fstr1(string("Success: %d\r\n"), success)
-    term.fstr1(string("Value: %8x\r\n"), value)
+    success, rawValue, lumen := lightSensor.readOnceHiRes2()
+    term.fstr1(string(" - Success: %d\r\n"), success)
+    term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
+    term.fstr1(string(" - lumen: %d\r\n"), lumen)
 
     term.fstr0(string("\r\nDone\r\n"))
 
 
+PRI stop()
+    ' Stop the driver
+    if cog
+        display.stop()
+        cog := 0
+
+
 PRI quietSensor()
+    lightSensor[0].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR0)  ' set pins to output low... so we can set LA trigger
+    lightSensor[1].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR1)  ' set pins to output low... so we can set LA trigger
+    lightSensor[2].init(PIN_BH1750_SDA, PIN_BH1750_SCL, PIN_BH1750_ADDR2)  ' set pins to output low... so we can set LA trigger
 
-    lightSensor.init()  ' set pins to output low... so we can set LA trigger
 
-
-PRI initSensor() | deviceFound
+PRI initSensor() | deviceFound, freqValue, freqValue2
 
     term.fstr0(string("Setup...\r\n"))
     lightSensor.setup()                                           ' i2c @ 100kHz, external pull-ups
 
+    freqValue, freqValue2 := lightSensor.getClockFreq()
+    term.fstr1(string(" - Freq1: %d\r\n"), freqValue)
+    term.fstr1(string(" - Tix: %d\r\n"), freqValue2)
+
     term.fstr0(string("ID Slave...\r\n"))
     deviceFound := lightSensor.idDevice()
     if(deviceFound == lightSensor.DVC_SLAVE0)
-        term.fstr0(string("Found SLAVE0\r\n"))
+        term.fstr0(string(" - Found SLAVE0\r\n"))
 
     elseif(deviceFound == lightSensor.DVC_SLAVE1)
-        term.fstr0(string("Found SLAVE1\r\n"))
+        term.fstr0(string(" - Found SLAVE1\r\n"))
 
     else
-        term.fstr0(string("Found no slaves\r\n"))
+        term.fstr0(string(" - Found NO slaves\r\n"))
 
-CON { pins for testing }
-
-    PIN_BH1750_SCL  = 16    ' blue
-    PIN_BH1750_SDA  = 17    ' yellow
-    PIN_BH1750_ADDR = 18    ' dk grn
 
 PRI drivePinsForLATest() | index
     '' see if we have LA wired up correctly...
@@ -133,12 +157,30 @@ PRI drivePinsForLATest() | index
         if (index // 2 == 0)
             pintoggle(PIN_BH1750_SDA)
         if (index // 3 == 0)
-            pintoggle(PIN_BH1750_ADDR)
+            pintoggle(PIN_BH1750_ADDR0)
+        if (index // 4 == 0)
+            pintoggle(PIN_BH1750_ADDR1)
+        if (index // 5 == 0)
+            pintoggle(PIN_BH1750_ADDR2)
+
+PRI demoAlignmentText()
+    display.setTextFont(display.TEXT_FONT_5x7)    ' font size
+    display.setCursor(0, 0)   ' start at top left, with one pixel of spacing
+    display.setColoredTextAtLnCol(0, 0, string("Line 1"), color.cBlue)
+    display.setColoredTextAtLnCol(1, 0, string("Propeller"), color.cBlue)
+    display.setColoredTextAtLnCol(2, 0, string("Propeller2"), color.cBlue)
+    display.setColoredTextAtLnCol(3, 0, string("Line 4"), color.cBlue)
+    display.commitScreenToPanel()
 
 
-PRI setup()
+PRI setup(): ok
+    ' setup our devices
+    term.start(BR_TERM)                                           ' start terminal io
 
-  term.start(BR_TERM)                                           ' start terminal io
+    ok := cog := display.start()   ' send buffer to driver
+    if ok == -1
+        debug("- Measure: underlying drivers failed!")
+        abort
 
 
 PRI wait_for_terminal(clear)

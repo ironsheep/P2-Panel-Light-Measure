@@ -7,13 +7,13 @@
             "label": "compileP2",
             "type": "shell",
     		  "osx": {
-                "command": "/Applications/FlexProp/bin/flexspin",
+                "command": "flexspin.mac",
     		  },
     		  "windows": {
-                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\flexspin.exe",
+                "command": "flexspin.exe",
     		  },
     		  "linux": {
-                "command": "/opt/flexprop/bin/flexspin",
+                "command": "flexspin",
     		  },
             "args": [
                 "-2",
@@ -45,19 +45,19 @@
             "label": "compileTopP2",
             "type": "shell",
             "osx": {
-                "command": "/Applications/FlexProp/bin/flexspin",
+                "command": "flexspin.mac",
             },
             "windows": {
-                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\flexspin.exe",
+                "command": "flexspin.exe",
             },
             "linux": {
-                "command": "/opt/flexprop/bin/flexspin",
+                "command": "flexspin",
             },
             "args": [
                 "-2",
                 "-Wabs-paths",
                 "-Wmax-errors=99",
-                "isp_measure_panel.spin2"
+                "${config:topLevel}.spin2"
             ],
             "problemMatcher": {
                 "owner": "Spin2",
@@ -78,25 +78,31 @@
         {
             "label": "downloadP2",
             "type": "shell",
+            "args": [
+                "-b230400",
+                "${config:topLevel}.binary",
+                "-t"
+            ],
             "osx": {
-                "command": "/Applications/FlexProp/bin/loadp2",
+                "command": "loadp2.mac",
             },
             "windows": {
-                "command": "C:\\Users\\smmor\\ProgramFiles\\flexprop\\bin\\loadp2.exe",
+                "command": "loadp2.exe",
             },
             "linux": {
-                "command": "/opt/flexprop/bin/loadp2",
+                "command": "loadp2",
+                "args": [
+                    "-b230400",
+                    "${config:topLevel}.binary",
+                    "-t",
+                    "-p/dev/ttyUSB0"
+                ],
             },
             "problemMatcher": [],
             "presentation": {
                 "panel": "new",
                 "focus": true
             },
-            "args": [
-                "-b230400",
-                "isp_measure_panel.binary",
-                "-t"
-            ],
             "dependsOn": [
                 "compileTopP2"
             ]

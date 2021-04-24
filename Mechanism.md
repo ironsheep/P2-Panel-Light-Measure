@@ -1,22 +1,44 @@
-# P2-Panel-Light-Measure
-Using BH1750s to measure HUB75 Panel output - running on the Parallax P2 Processor
+#  Instrumenting the HUB75 Matrix for measurement
 
-![Project Maintenance][maintenance-shield]
-[![License][license-shield]](LICENSE) 
+Applying light sensors to our HUB75 Panels so we can directly measure emitted light.  
 
+To recap:
 The point of this project is to instrument our HUB75 panel with light sensors so we can directly measure the emitted light from our LEDs.  Our Goal is to identify 16 distinct grey scale values so we can imporove our color presentation of the panels.
 
 We hypothesize that this will force us to move from a simple PWM to a more advanced PWM.
 
-All of the driving of the panel, the measuring of the light values and reporting will take place on the Propeller 2 development hardware.
+[![License][license-shield]](LICENSE) 
 
-![ready to wire](images/ready4wiring.jpg)
-**Fig 1 - Our panel waiting for wiring harness**
 
-See also [Fixture Mechanical Design](Mechanism.md)
+## The hardware
 
-## The project
+For this project we are using three BH1750 ambient light sensors. These are wired up to a common I2C bus and each BH1750 has its own device enable line.  We want to be able to measure the LED light output unaffected by ambient light aound our testbench so we build a shroud to block out room light from between the RGB Matrix panel and the BH1750 sensor.  We 3D printed the shroud parts and mounted the BH1750's to the new shrouds which are in-turn clipped to the Matrix Panels.
 
+## The fixture design
+
+![Modeling our BH1750 Fixture](images/3d-model.jpg)
+
+**NOTE** the shroud opening is 24mm x 24mm to accommodate P2 (2mm), P3 (3mm), and P4 (4mm) distances between LEDs (as well as other multiples).
+
+![Installing the BH1750](images/installing-bh1750.jpg)
+
+The shroud features M2 screw holes and voids where R,C parts interfere witht he PCB supports.
+
+![Interior design of the shroud](images/theShroud.jpg)
+
+
+
+## The fixture with BH1750 installed
+
+
+![Three assembled](images/sensors-ready.jpg)
+
+The three shrouds are assembled.
+
+![Mounted on panel](images/thePanelMounts.jpg)
+
+
+...And then clipped onto the panel, now ready for the wiring harness.
 
 ---
 
