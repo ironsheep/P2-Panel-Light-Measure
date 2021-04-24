@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+# P2 tool products
+*.lst
+*.obj
+*.txt
+*.bin
+*.bin2
+
 # archives
 *.zip
 *.gz
