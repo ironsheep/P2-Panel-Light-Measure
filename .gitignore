@@ -13,6 +13,10 @@ __pycache__/
 *.bin
 *.bin2
 
+#  our work files
+src/*.csv
+src/*.log
+
 # archives
 *.zip
 *.gz
@@ -74,7 +78,6 @@ coverage.xml
 *.pot
 
 # Django stuff:
-*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal

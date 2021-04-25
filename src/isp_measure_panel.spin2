@@ -89,6 +89,7 @@ PUB main() | success, red, green, blue
     initSensors()    ' start our i2c light sensor
     powerOnSensors()
 
+    term.fstr0(string("Pattern, Color, # Bits, Bits, Count, LumenAvg, Lumen0, Lumen1, Lumen2\r\n"))
     measurePatternSet(@justified, string("justified"))
     measurePatternSet(@spread, string("spread"))
     measurePatternSet(@grouped2, string("grouped2"))
@@ -101,7 +102,7 @@ CON { color enums }
 #0, BFR_RED, BFR_GREEN, BFR_BLUE, BFR_WHITE
 
 PRI measurePatternSet(pPatternSet, patternName) | patternIndex, pwmBits, colorIndex, pColorName
-    term.fstr1(string("\r\n\r\n====<  %s  >====\r\n"), patternName)
+    'term.fstr1(string("\r\n\r\n====<  %s  >====\r\n"), patternName)
     repeat colorIndex from 0 to 3
         case colorIndex
             BFR_RED:
@@ -112,10 +113,10 @@ PRI measurePatternSet(pPatternSet, patternName) | patternIndex, pwmBits, colorIn
                 pColorName := string("Blue")
             other:
                 pColorName := string("White")
-        term.fstr1(string("---- %s ----\r\n"), pColorName)
-        repeat patternIndex from 0 to 15
+        'term.fstr1(string("---- %s ----\r\n"), pColorName)
+        repeat patternIndex from 0 to 16
             pwmBits := word[pPatternSet][patternIndex]
-            term.fstr1(string("- \%%16b\r\n"), pwmBits)
+            'term.fstr1(string("- \%%16b\r\n"), pwmBits)
             case colorIndex
                 BFR_RED:
                     display.testSetPWMbitsforRGB(pwmBits, 0, 0)
@@ -126,8 +127,8 @@ PRI measurePatternSet(pPatternSet, patternName) | patternIndex, pwmBits, colorIn
                 other:
                     display.testSetPWMbitsforRGB(pwmBits, pwmBits, pwmBits)
             waitms(30)  ' allow time for screen to paint
-            measureNLogSensorValues()
-        term.fstr0(string("\r\n"))  ' blank line
+            measureNLogSensorValues(patternName, pColorName, patternIndex, pwmBits)
+        'term.fstr0(string("\r\n"))  ' blank line
 
 PUB mainTest() | success, red, green, blue
 
@@ -183,7 +184,7 @@ PRI measureSensors() | sensorIndex, success, rawValue, lumen
         term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
         term.fstr1(string(" - lumen: %d\r\n\r\n"), lumen)
 
-PRI measureNLogSensorValues() : desiredLumen | sensorIndex, success, lumen, lumen0, lumen1, lumen2, lumenSum, rawValue, successCt
+PRI measureNLogSensorValues(patternName, pColorName, bitCount, pwmBits) : desiredLumen | sensorIndex, success, lumen, lumen0, lumen1, lumen2, lumenSum, rawValue, successCt
     successCt := 0
     lumenSum := 0
     lumen0 := lumen1 := lumen2 := desiredLumen := 0
@@ -207,7 +208,7 @@ PRI measureNLogSensorValues() : desiredLumen | sensorIndex, success, lumen, lume
         'term.fstr1(string(" - lumen: %d\r\n\r\n"), lumen)
     if successCt > 0
         desiredLumen := lumenSum / successCt
-        term.fstr5(string("  -- %d good. avg:%d lum, [#0:%d, #1:%d, #2:%d]\r\n"), successCt, desiredLumen, lumen0, lumen1, lumen2)
+        term.fstr9(string("%s, %s, 0b%0.16b, %d, \'%d of 3\', %d, %d, %d, %d\r\n"), patternName, pColorName, pwmBits, bitCount, successCt, desiredLumen, lumen0, lumen1, lumen2)
 
 
 PRI stop()
