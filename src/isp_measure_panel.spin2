@@ -78,20 +78,73 @@ OBJ { our devices }
 PUB main() | success, red, green, blue
 
     setup()
+    display.clearScreen()
+    wait_for_terminal(true)
+
+    quietSensor() ' set pins to output low... so we can set LA trigger
+
+    term.fstr0(string("\r\nMeasure Panel Started!\r\n\r\n"))
+
+    term.fstr0(string("Start()\r\n"))
+    initSensors()    ' start our i2c light sensor
+    powerOnSensors()
+
+    measurePatternSet(@justified, string("justified"))
+    measurePatternSet(@spread, string("spread"))
+    measurePatternSet(@grouped2, string("grouped2"))
+
+    display.clearScreen()
+    term.fstr0(string("DONE()\r\n"))
+
+CON { color enums }
+
+#0, BFR_RED, BFR_GREEN, BFR_BLUE, BFR_WHITE
+
+PRI measurePatternSet(pPatternSet, patternName) | patternIndex, pwmBits, colorIndex, pColorName
+    term.fstr1(string("\r\n\r\n====<  %s  >====\r\n"), patternName)
+    repeat colorIndex from 0 to 3
+        case colorIndex
+            BFR_RED:
+                pColorName := string("Red")
+            BFR_GREEN:
+                pColorName := string("Green")
+            BFR_BLUE:
+                pColorName := string("Blue")
+            other:
+                pColorName := string("White")
+        term.fstr1(string("---- %s ----\r\n"), pColorName)
+        repeat patternIndex from 0 to 15
+            pwmBits := word[pPatternSet][patternIndex]
+            term.fstr1(string("- \%%16b\r\n"), pwmBits)
+            case colorIndex
+                BFR_RED:
+                    display.testSetPWMbitsforRGB(pwmBits, 0, 0)
+                BFR_GREEN:
+                    display.testSetPWMbitsforRGB(0, pwmBits, 0)
+                BFR_BLUE:
+                    display.testSetPWMbitsforRGB(0, 0, pwmBits)
+                other:
+                    display.testSetPWMbitsforRGB(pwmBits, pwmBits, pwmBits)
+            waitms(30)  ' allow time for screen to paint
+            measureNLogSensorValues()
+        term.fstr0(string("\r\n"))  ' blank line
+
+PUB mainTest() | success, red, green, blue
+
+    setup()
 
     'demoAlignmentText()
     display.clearScreen()
     'display.drawBoxOfColor(0, 0, 64, 16, TRUE, color.cFullBlue)
     'display.drawBoxOfColor(16, 0, 64, 16, TRUE, color.cFullRed)
-    display.fillScreen(color.cGray)    ' full single color panel w/PWM
-    display.commitScreenToPanel()
+    'display.fillScreen(color.cGray)    ' full single color panel w/PWM
+    'display.commitScreenToPanel()
 
-    red := %0000_0011_0000_0011
-    green := %0000_0000_0000_0000
-    blue := %0000_0000_0000_0000
+    red := %0000_0000_0000_0011
+    green := %0000_0000_0000_0011
+    blue := %0000_0000_0000_0011
 
     display.testSetPWMbitsforRGB(red, green, blue)
-
 
     wait_for_terminal(true)
 
@@ -129,6 +182,33 @@ PRI measureSensors() | sensorIndex, success, rawValue, lumen
         term.fstr1(string(" - Success: %d\r\n"), success)
         term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
         term.fstr1(string(" - lumen: %d\r\n\r\n"), lumen)
+
+PRI measureNLogSensorValues() : desiredLumen | sensorIndex, success, lumen, lumen0, lumen1, lumen2, lumenSum, rawValue, successCt
+    successCt := 0
+    lumenSum := 0
+    lumen0 := lumen1 := lumen2 := desiredLumen := 0
+    repeat sensorIndex from 0 to 2
+        'term.fstr1(string("Measure then read sensor #%d\r\n"), sensorIndex)
+        success, rawValue, lumen := lightSensor[sensorIndex].readOnceHiRes2()
+        if success
+            successCt += 1
+            lumenSum += lumen
+            case sensorIndex
+                0:
+                    lumen0 := lumen
+                1:
+                    lumen1 := lumen
+                other:
+                    lumen2 := lumen
+        'else
+        '    term.fstr1(string(" - READ FAILED: %d\r\n"), success)
+        'term.fstr1(string(" - Success: %d\r\n"), success)
+        'term.fstr1(string(" - rawValue: 0x%0.8x\r\n"), rawValue)
+        'term.fstr1(string(" - lumen: %d\r\n\r\n"), lumen)
+    if successCt > 0
+        desiredLumen := lumenSum / successCt
+        term.fstr5(string("  -- %d good. avg:%d lum, [#0:%d, #1:%d, #2:%d]\r\n"), successCt, desiredLumen, lumen0, lumen1, lumen2)
+
 
 PRI stop()
     ' Stop the driver
@@ -220,6 +300,25 @@ PRI wait_for_terminal(clear)
   if (clear)
     term.tx(term.CLS)
 
+DAT { pwm test bit-patterns }
+
+justified   word    %0000_0000_0000_0000, %0000_0000_0000_0001, %0000_0000_0000_0011, %0000_0000_0000_0111
+            word    %0000_0000_0000_1111, %0000_0000_0001_1111, %0000_0000_0011_1111, %0000_0000_0111_1111
+            word    %0000_0000_1111_1111, %0000_0001_1111_1111, %0000_0011_1111_1111, %0000_0111_1111_1111
+            word    %0000_1111_1111_1111, %0001_1111_1111_1111, %0011_1111_1111_1111, %0111_1111_1111_1111
+            word    %1111_1111_1111_1111
+
+spread      word    %0000_0000_0000_0000, %0000_0000_0000_0001, %0000_0001_0000_0001, %0000_0100_0010_0001
+            word    %0001_0001_0001_0001, %0010_0100_0100_1001, %0010_0101_0010_0101, %0101_0100_1010_0101
+            word    %0101_0101_0101_0101, %0101_0101_1101_0101, %0101_1101_0101_1101, %0101_1101_1101_1101
+            word    %1101_1101_1101_1101, %1101_1101_1111_1101, %1111_1101_1111_1101, %1101_1111_1111_1111
+            word    %1111_1111_1111_1111
+
+grouped2    word    %0000_0000_0000_0000, %0000_0000_0000_0001, %0000_0001_0000_0001, %0000_0001_0000_0011
+            word    %0000_0011_0000_0011, %0000_0011_0000_0111, %0000_0111_0000_0111, %0000_0111_0000_1111
+            word    %0000_1111_0000_1111, %0000_1111_0001_1111, %0001_1111_0001_1111, %0001_1111_0011_1111
+            word    %0011_1111_0011_1111, %0011_1111_0111_1111, %0111_1111_0111_1111, %0111_1111_1111_1111
+            word    %1111_1111_1111_1111
 
 CON { license }
 
